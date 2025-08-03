@@ -1,0 +1,320 @@
+.table-container {
+  width: 98%; /* 调整宽度为95%，留出5%的空间作为外边距 */
+  margin: 0 auto; /* 水平居中表格 */
+  overflow-x: auto;
+  margin-top: 20px;
+}
+
+/* 移除固定宽度设置，改为自适应 */
+.resizable-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed; /* 改回fixed，固定列宽 */
+}
+
+/* 移除所有固定宽度的设置 */
+/* 调整特定列的宽度 */
+/* 为每一列单独设置宽度 */
+/* 调整任务步骤列和备注列的宽度 */
+/* 压缩其他列的宽度 */
+
+/* 可以保留一些最小宽度设置，防止列太窄 */
+.resizable-table th,
+.resizable-table td {
+  width: 60px; /* 改为固定宽度 */
+  padding: 12px 15px;
+  border: 1px solid #e0e0e0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 可以为重要列设置较大的固定宽度 */
+.resizable-table th:nth-child(1),
+.resizable-table td:nth-child(1) {
+  width: 150px; /* 任务名称列固定宽度 */
+}
+
+.resizable-table th:nth-child(2),
+.resizable-table td:nth-child(2) {
+  width: 200px; /* 任务步骤列固定宽度 */
+}
+
+.resizable-table th:nth-child(10),
+.resizable-table td:nth-child(10) {
+  width: 120px; /* 备注列固定宽度 */
+}
+
+.resizable-table th {
+  background-color: #f5f5f5;
+  font-weight: bold;
+  font-size: 12px; /* 减小字体大小两个号 */
+  text-align: center; /* 改为居中显示 */
+  position: relative;
+  padding-right: 25px; /* 为调整器留出空间 */
+}
+
+.resizable-table td {
+  font-size: 14px; /* 表格内容字体使用14号 */
+}
+
+.resizable-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.resizable-table tbody tr:hover {
+  background-color: #f0f7ff;
+}
+
+.resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 5px;
+  height: 100%;
+  background-color: transparent;
+  cursor: col-resize;
+}
+
+.resizer:hover {
+  background-color: #4a90e2;
+}
+
+/* 添加任务功能的样式 */
+.add-task-row td {
+  padding: 0;
+  border: 1px solid #e0e0e0;
+}
+
+.add-task-btn {
+  width: 100%;
+  height: 100%;
+  padding: 12px 0;
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.add-task-btn:hover {
+  background-color: #357abd;
+}
+
+.new-task-row input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #4a90e2;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.new-task-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+}
+
+.new-task-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.save-task-btn {
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.cancel-task-btn {
+  background-color: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* 步骤添加按钮样式 */
+.add-step-btn {
+  width: 100%;
+  height: 100%;
+  padding: 8px 0;
+  background-color: #5cb85c;
+  color: white;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.add-step-btn:hover {
+  background-color: #4cae4c;
+}
+
+/* 步骤行样式 */
+.step-row td {
+  background-color: #f9f9f9;
+}
+
+/* 新步骤行样式 */
+.new-step-row td {
+  padding: 5px;
+}
+
+.new-step-row input {
+  width: 100%;
+  padding: 5px;
+  box-sizing: border-box;
+}
+
+.new-step-buttons {
+  margin-top: 5px;
+  display: flex;
+  gap: 5px;
+}
+
+.save-step-btn {
+  background-color: #5cb85c;
+  color: white;
+  border: none;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+.cancel-step-btn {
+  background-color: #d9534f;
+  color: white;
+  border: none;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+/* 编辑单元格样式 */
+.edit-cell-container {
+  padding: 2px 0;
+}
+
+.edit-cell-container input,
+.edit-cell-container select {
+  width: 100%;
+  padding: 5px;
+  box-sizing: border-box;
+}
+
+.edit-buttons {
+  margin-top: 5px;
+  display: flex;
+  gap: 5px;
+}
+
+.save-edit-btn {
+  background-color: #5cb85c;
+  color: white;
+  border: none;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+.cancel-edit-btn {
+  background-color: #d9534f;
+  color: white;
+  border: none;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+/* 添加到现有文件 */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+/* 优化下拉框样式 */
+.new-step-row select {
+  width: 100%;
+  padding: 8px 12px;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: white;
+  font-size: 14px;
+  color: #333;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="292.4" height="292.4"><path fill="%23007CB2" d="M287 69.4a17.6 17.6 0 0 0-13-5.4H18.4c-5 0-9.3 1.8-12.9 5.4A17.6 17.6 0 0 0 0 82.2c0 5 1.8 9.3 5.4 12.9l128 127.9c3.6 3.6 7.8 5.4 12.8 5.4s9.2-1.8 12.8-5.4L287 95c3.5-3.5 5.4-7.8 5.4-12.8 0-5-1.9-9.2-5.5-12.8z"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.new-step-row select:hover {
+  border-color: #4a90e2;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.new-step-row select:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+}
+
+/* 优化选项样式 */
+.new-step-row select option {
+  padding: 8px 12px;
+  background-color: white;
+  color: #333;
+}
+
+.new-step-row select option:hover {
+  background-color: #f0f7ff;
+  color: #4a90e2;
+}
+
+/* 优化编辑单元格中的下拉框样式 */
+.edit-cell-container select {
+  width: 100%;
+  padding: 8px 12px;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: white;
+  font-size: 14px;
+  color: #333;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="292.4" height="292.4"><path fill="%23007CB2" d="M287 69.4a17.6 17.6 0 0 0-13-5.4H18.4c-5 0-9.3 1.8-12.9 5.4A17.6 17.6 0 0 0 0 82.2c0 5 1.8 9.3 5.4 12.9l128 127.9c3.6 3.6 7.8 5.4 12.8 5.4s9.2-1.8 12.8-5.4L287 95c3.5-3.5 5.4-7.8 5.4-12.8 0-5-1.9-9.2-5.5-12.8z"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.edit-cell-container select:hover {
+  border-color: #4a90e2;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.edit-cell-container select:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+}

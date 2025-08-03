@@ -1,0 +1,10 @@
+系统中新增步骤的字段与数据库dashboard表中的字段对应关系（左侧为系统表头字段名称，右侧为数据库字段）：
+任务步骤-task_step
+开始日期-startdate
+截止日期-enddate
+责任人-responsibility
+当前状态-taskstate
+是否完成-iscomplete
+优先级-priority
+是否超期-islate
+备注-remark

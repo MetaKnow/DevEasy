@@ -1,0 +1,58 @@
+.stats-container {
+  width: 95%;
+  margin: 0 auto;
+  padding: 20px 20px 20px 0; /* 仅保留上、右、下内边距，移除左内边距 */
+  box-sizing: border-box;
+}
+
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 15px;
+  width: 100%;
+}
+
+.stat-card {
+  background-color: #f9f9f9;
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+  border-left: 4px solid #4caf50;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: bold;
+  color: #333;
+}
+
+/* 卡片颜色区分 */
+.stat-card:nth-child(5n+1) { border-left-color: #4caf50; }
+.stat-card:nth-child(5n+2) { border-left-color: #2196f3; }
+.stat-card:nth-child(5n+3) { border-left-color: #ff9800; }
+.stat-card:nth-child(5n+4) { border-left-color: #f44336; }
+.stat-card:nth-child(5n+5) { border-left-color: #9c27b0; }
+
+/* 响应式调整 */
+@media (max-width: 1200px) {
+  .stats-cards { grid-template-columns: repeat(4, 1fr); }
+}
+
+@media (max-width: 992px) {
+  .stats-cards { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .stats-cards { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 576px) {
+  .stats-cards { grid-template-columns: 1fr; }
+}
