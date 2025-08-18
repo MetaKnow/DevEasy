@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import './TableComponent.css';
+import Tooltip from './Tooltip.js';
 
 import dictConfig from '../config/dictConfig.js';
 import {
@@ -33,6 +34,29 @@ const TableComponent = ({ taskCircleId, loading }) => {
   const [editValue, setEditValue] = useState('');
   const [tableData, setTableData] = useState([]);
   const [isCollapsed, setIsCollapsed] = useState(false); // 新增：折叠状态
+
+  // 辅助函数：判断文本是否需要显示气泡提示
+  const shouldShowTooltip = (text, maxLength = 5) => {
+    return text && text.toString().length > maxLength;
+  };
+
+  // 辅助函数：创建带气泡提示的单元格内容
+  const createCellWithTooltip = (content, displayContent = null) => {
+    const display = displayContent || content;
+    const needsTooltip = shouldShowTooltip(content);
+    
+    if (needsTooltip) {
+      return (
+        <Tooltip content={content}>
+          <div className="cell-with-tooltip">
+            {display}
+          </div>
+        </Tooltip>
+      );
+    }
+    
+    return display;
+  };
 
   // 列宽调整功能保持不变
   useEffect(() => {
@@ -438,7 +462,7 @@ const TableComponent = ({ taskCircleId, loading }) => {
                       </div>
                     </div>
                   ) : (
-                    task.task_name
+                    createCellWithTooltip(task.task_name)
                   )}
                 </td>
                 <td colSpan="9"></td> {/* 合并其他列 */}
@@ -493,7 +517,7 @@ const TableComponent = ({ taskCircleId, loading }) => {
                         </div>
                       </div>
                     ) : (
-                      step.task_step
+                      createCellWithTooltip(step.task_step)
                     )}
                   </td>
                   <td
@@ -557,7 +581,7 @@ const TableComponent = ({ taskCircleId, loading }) => {
                         </div>
                       </div>
                     ) : (
-                      step.responsibility
+                      createCellWithTooltip(step.responsibility)
                     )}
                   </td>
                   <td
@@ -581,7 +605,7 @@ const TableComponent = ({ taskCircleId, loading }) => {
                         </div>
                       </div>
                     ) : (
-                      step.taskstate
+                      createCellWithTooltip(step.taskstate)
                     )}
                   </td>
                   <td
@@ -604,7 +628,7 @@ const TableComponent = ({ taskCircleId, loading }) => {
                           </div>
                         </div>
                       ) : (
-                        step.iscomplete  // 直接显示枚举值，不再使用三元表达式
+                        createCellWithTooltip(step.iscomplete)  // 直接显示枚举值，不再使用三元表达式
                       )}
                     </td>
                     
@@ -628,7 +652,7 @@ const TableComponent = ({ taskCircleId, loading }) => {
                           </div>
                         </div>
                       ) : (
-                        step.islate  // 直接显示枚举值，不再使用三元表达式
+                        createCellWithTooltip(step.islate)  // 直接显示枚举值，不再使用三元表达式
                       )}
                     </td>
                   <td
@@ -652,7 +676,7 @@ const TableComponent = ({ taskCircleId, loading }) => {
                         </div>
                       </div>
                     ) : (
-                      step.priority
+                      createCellWithTooltip(step.priority)
                     )}
                   </td>
                   <td
@@ -672,7 +696,7 @@ const TableComponent = ({ taskCircleId, loading }) => {
                         </div>
                       </div>
                     ) : (
-                      step.remark
+                      createCellWithTooltip(step.remark)
                     )}
                   </td>
                 </tr>

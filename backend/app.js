@@ -7,7 +7,7 @@ const app = express();
 
 // 3. 配置CORS中间件 (必须在其他中间件和路由之前)
 app.use(cors({
-  origin: 'http://192.168.0.115:3000',  // 确保与前端实际域名完全一致
+  origin: 'http://localhost:3000',  // 确保与前端实际域名完全一致
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With'],
@@ -17,7 +17,7 @@ app.use(cors({
 
 // 4. 处理预检请求(OPTIONS)
 app.options('*', cors({
-  origin: 'http://192.168.0.115:3000',
+  origin: 'http://localhost:3000',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With'],

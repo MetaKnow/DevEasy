@@ -318,3 +318,25 @@
   border-color: #4a90e2;
   box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
 }
+
+/* 气泡提示相关样式 */
+.cell-with-tooltip {
+  cursor: pointer;
+  position: relative;
+}
+
+.cell-with-tooltip:hover {
+  background-color: #f0f7ff !important;
+}
+
+/* 确保表格容器支持气泡定位 */
+.table-container {
+  position: relative;
+}
+
+/* 为单元格添加相对定位 */
+.resizable-table td {
+  position: relative;
+}
+
+/* 气泡提示样式已在Tooltip.css中定义，这里只保留必要的样式 */
