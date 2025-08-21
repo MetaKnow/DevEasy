@@ -115,4 +115,309 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// 移动任务到其他年月阶段
+router.post('/move', async (req, res) => {
+  try {
+    const { task_id, target_year, target_month, target_phase } = req.body;
+    console.log('接收到移动任务的请求:', { task_id, target_year, target_month, target_phase });
+
+    // 首先查找目标task_circle_id
+    const targetTaskCircle = await db.TaskCircle.findOne({
+      where: {
+        year: target_year,
+        month: target_month,
+        phase: target_phase
+      }
+    });
+
+    if (!targetTaskCircle) {
+      return res.status(404).json({ message: '目标年月阶段不存在' });
+    }
+
+    // 查找要移动的任务
+    const task = await Task.findByPk(task_id);
+    if (!task) {
+      return res.status(404).json({ message: '找不到要移动的任务' });
+    }
+
+    const oldTaskCircleId = task.task_circle_id;
+    const newTaskCircleId = targetTaskCircle.id;
+
+    // 更新任务的task_circle_id
+    await task.update({ task_circle_id: newTaskCircleId });
+
+    // 更新该任务下所有步骤的task_circle_id
+    await db.dashboard.update(
+      { task_circle_id: newTaskCircleId },
+      { where: { task_id: task_id } }
+    );
+
+    // 更新原阶段和目标阶段的统计数据
+    await updateTaskCircleStats(oldTaskCircleId);
+    await updateTaskCircleCompleteStats(oldTaskCircleId);
+    await updateTaskCircleLateStats(oldTaskCircleId);
+    await updateTaskCircleStepStates(oldTaskCircleId);
+    await updateTaskCirclePercentages(oldTaskCircleId);
+
+    await updateTaskCircleStats(newTaskCircleId);
+    await updateTaskCircleCompleteStats(newTaskCircleId);
+    await updateTaskCircleLateStats(newTaskCircleId);
+    await updateTaskCircleStepStates(newTaskCircleId);
+    await updateTaskCirclePercentages(newTaskCircleId);
+
+    console.log('任务移动成功:', { task_id, from: oldTaskCircleId, to: newTaskCircleId });
+    res.json({ 
+      message: '任务移动成功', 
+      task_id, 
+      old_task_circle_id: oldTaskCircleId, 
+      new_task_circle_id: newTaskCircleId 
+    });
+  } catch (err) {
+    console.error('移动任务出错:', err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// 暂存任务到暂存区
+router.post('/stage', async (req, res) => {
+  try {
+    const { task_id } = req.body;
+    console.log('接收到暂存任务的请求:', { task_id });
+
+    // 查找要暂存的任务
+    const task = await Task.findByPk(task_id, {
+      include: [{
+        model: db.dashboard,
+        as: 'steps'
+      }]
+    });
+
+    if (!task) {
+      return res.status(404).json({ message: '找不到要暂存的任务' });
+    }
+
+    // 创建暂存任务
+    const stagedTask = await db.StagedTask.create({
+      original_task_id: task.id,
+      task_circle_id: task.task_circle_id,
+      task_name: task.task_name,
+      startdate: task.startdate,
+      enddate: task.enddate,
+      remark: task.remark,
+      iscomplete: task.iscomplete,
+      islate: task.islate,
+      staged_at: new Date()
+    });
+
+    // 暂存所有相关步骤
+    if (task.steps && task.steps.length > 0) {
+      const stagedSteps = task.steps.map(step => ({
+        original_step_id: step.id,
+        staged_task_id: stagedTask.id,
+        task_circle_id: step.task_circle_id,
+        task_step: step.task_step,
+        startdate: step.startdate,
+        enddate: step.enddate,
+        responsibility: step.responsibility,
+        taskstate: step.taskstate,
+        iscomplete: step.iscomplete,
+        islate: step.islate,
+        priority: step.priority,
+        remark: step.remark,
+        staged_at: new Date()
+      }));
+      
+      await db.StagedDashboard.bulkCreate(stagedSteps);
+    }
+
+    // 删除原始任务和步骤
+    const oldTaskCircleId = task.task_circle_id;
+    
+    // 删除原始步骤
+    await db.dashboard.destroy({
+      where: { task_id: task_id }
+    });
+    
+    // 删除原始任务
+    await task.destroy();
+
+    // 更新原阶段的统计数据
+    await updateTaskCircleStats(oldTaskCircleId);
+    await updateTaskCircleCompleteStats(oldTaskCircleId);
+    await updateTaskCircleLateStats(oldTaskCircleId);
+    await updateTaskCircleStepStates(oldTaskCircleId);
+    await updateTaskCirclePercentages(oldTaskCircleId);
+
+    console.log('任务暂存成功:', { task_id, staged_task_id: stagedTask.id });
+    res.json({ 
+      message: '任务暂存成功', 
+      task_id, 
+      staged_task_id: stagedTask.id 
+    });
+  } catch (err) {
+    console.error('暂存任务出错:', err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// 获取暂存区数据
+router.get('/staged', async (req, res) => {
+  try {
+    console.log('接收到获取暂存数据的请求');
+
+    // 获取所有暂存任务及其步骤
+    const stagedTasks = await db.StagedTask.findAll({
+      include: [{
+        model: db.StagedDashboard,
+        as: 'stagedSteps'
+      }],
+      order: [['staged_at', 'DESC']]
+    });
+
+    console.log('查询到的暂存数据:', stagedTasks.length, '个任务');
+    res.json(stagedTasks);
+  } catch (err) {
+    console.error('获取暂存数据出错:', err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// 删除暂存任务
+router.delete('/staged/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('接收到删除暂存任务的请求:', { id });
+
+    // 查找暂存任务
+    const stagedTask = await db.StagedTask.findByPk(id);
+    if (!stagedTask) {
+      return res.status(404).json({ message: '找不到该暂存任务' });
+    }
+
+    // 删除相关的暂存步骤
+    await db.StagedDashboard.destroy({
+      where: { staged_task_id: id }
+    });
+
+    // 删除暂存任务
+    await stagedTask.destroy();
+
+    console.log('暂存任务删除成功:', { id });
+    res.json({ message: '暂存任务删除成功' });
+  } catch (err) {
+    console.error('删除暂存任务出错:', err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// 从暂存区恢复任务到指定阶段
+router.post('/staged/:id/restore', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { target_year, target_month, target_phase } = req.body;
+    console.log('接收到恢复暂存任务的请求:', { id, target_year, target_month, target_phase });
+
+    // 查找目标task_circle_id
+    const targetTaskCircle = await db.TaskCircle.findOne({
+      where: {
+        year: target_year,
+        month: target_month,
+        phase: target_phase
+      }
+    });
+
+    if (!targetTaskCircle) {
+      return res.status(404).json({ message: '目标年月阶段不存在' });
+    }
+
+    // 查找暂存任务及其步骤
+    const stagedTask = await db.StagedTask.findByPk(id, {
+      include: [{
+        model: db.StagedDashboard,
+        as: 'stagedSteps'
+      }]
+    });
+
+    if (!stagedTask) {
+      return res.status(404).json({ message: '找不到该暂存任务' });
+    }
+
+    // 创建新任务
+    const newTask = await Task.create({
+      task_circle_id: targetTaskCircle.id,
+      task_name: stagedTask.task_name,
+      startdate: stagedTask.startdate,
+      enddate: stagedTask.enddate,
+      remark: stagedTask.remark,
+      iscomplete: stagedTask.iscomplete,
+      islate: stagedTask.islate
+    });
+
+    // 恢复所有步骤
+    if (stagedTask.stagedSteps && stagedTask.stagedSteps.length > 0) {
+      const newSteps = stagedTask.stagedSteps.map(step => ({
+        task_id: newTask.id,
+        task_circle_id: targetTaskCircle.id,
+        task_step: step.task_step,
+        startdate: step.startdate,
+        enddate: step.enddate,
+        responsibility: step.responsibility,
+        taskstate: step.taskstate,
+        iscomplete: step.iscomplete,
+        islate: step.islate,
+        priority: step.priority,
+        remark: step.remark
+      }));
+      
+      await db.dashboard.bulkCreate(newSteps);
+    }
+
+    // 删除暂存数据
+    await db.StagedDashboard.destroy({
+      where: { staged_task_id: id }
+    });
+    await stagedTask.destroy();
+
+    // 更新目标阶段的统计数据
+    await updateTaskCircleStats(targetTaskCircle.id);
+    await updateTaskCircleCompleteStats(targetTaskCircle.id);
+    await updateTaskCircleLateStats(targetTaskCircle.id);
+    await updateTaskCircleStepStates(targetTaskCircle.id);
+    await updateTaskCirclePercentages(targetTaskCircle.id);
+
+    console.log('任务恢复成功:', { id, new_task_id: newTask.id, target_task_circle_id: targetTaskCircle.id });
+    res.json({ 
+      message: '任务恢复成功', 
+      task_id: newTask.id, 
+      target_task_circle_id: targetTaskCircle.id 
+    });
+  } catch (err) {
+    console.error('恢复任务出错:', err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// 删除暂存步骤
+router.delete('/staged/step/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('接收到删除暂存步骤的请求:', { id });
+
+    // 查找暂存步骤
+    const stagedStep = await db.StagedDashboard.findByPk(id);
+    if (!stagedStep) {
+      return res.status(404).json({ message: '找不到该暂存步骤' });
+    }
+
+    // 删除暂存步骤
+    await stagedStep.destroy();
+
+    console.log('暂存步骤删除成功:', { id });
+    res.json({ message: '暂存步骤删除成功' });
+  } catch (err) {
+    console.error('删除暂存步骤出错:', err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
 module.exports = router;

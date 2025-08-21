@@ -10,8 +10,16 @@ import {
   updateStep,
   deleteStep,
   deleteTask,
-  updateTask // 新增
+  updateTask,
+  moveTask,
+  getTaskCircleId,
+  stageTask
 } from '../services/taskService.js';
+import {
+  getYears,
+  getMonthsByYear,
+  getPhasesByYearAndMonth
+} from '../services/taskCircleService.js';
 
 const TableComponent = ({ taskCircleId, loading }) => {
   const tableRef = useRef(null);
@@ -34,6 +42,14 @@ const TableComponent = ({ taskCircleId, loading }) => {
   const [editValue, setEditValue] = useState('');
   const [tableData, setTableData] = useState([]);
   const [isCollapsed, setIsCollapsed] = useState(false); // 新增：折叠状态
+  const [showMoveDialog, setShowMoveDialog] = useState(false); // 移动对话框显示状态
+  const [moveTaskId, setMoveTaskId] = useState(null); // 要移动的任务ID
+  const [targetYear, setTargetYear] = useState(''); // 目标年份
+  const [targetMonth, setTargetMonth] = useState(''); // 目标月份
+  const [targetPhase, setTargetPhase] = useState(''); // 目标阶段
+  const [availableYears, setAvailableYears] = useState([]); // 可用年份列表
+  const [availableMonths, setAvailableMonths] = useState([]); // 可用月份列表
+  const [availablePhases, setAvailablePhases] = useState([]); // 可用阶段列表
 
   // 辅助函数：判断文本是否需要显示气泡提示
   const shouldShowTooltip = (text, maxLength = 5) => {
@@ -341,7 +357,120 @@ const TableComponent = ({ taskCircleId, loading }) => {
     }
   };
 
+  // 处理移动任务按钮点击
+  const handleMoveTask = async (taskId) => {
+    setMoveTaskId(taskId);
+    setShowMoveDialog(true);
+    
+    // 获取可用的年份列表
+    try {
+      const years = await getYears();
+      setAvailableYears(years);
+    } catch (error) {
+      console.error('获取年份列表失败:', error);
+      alert('获取年份列表失败，请稍后再试');
+    }
+  };
+
+  // 处理目标年份变化
+  const handleTargetYearChange = async (year) => {
+    setTargetYear(year);
+    setTargetMonth('');
+    setTargetPhase('');
+    setAvailableMonths([]);
+    setAvailablePhases([]);
+    
+    if (year) {
+      try {
+        const months = await getMonthsByYear(year);
+        setAvailableMonths(months);
+      } catch (error) {
+        console.error('获取月份列表失败:', error);
+      }
+    }
+  };
+
+  // 处理目标月份变化
+  const handleTargetMonthChange = async (month) => {
+    setTargetMonth(month);
+    setTargetPhase('');
+    setAvailablePhases([]);
+    
+    if (targetYear && month) {
+      try {
+        const phases = await getPhasesByYearAndMonth(targetYear, month);
+        setAvailablePhases(phases);
+      } catch (error) {
+        console.error('获取阶段列表失败:', error);
+      }
+    }
+  };
+
+  // 确认移动任务
+   const confirmMoveTask = async () => {
+     if (!targetYear || !targetMonth || !targetPhase) {
+       alert('请选择完整的目标年月阶段');
+       return;
+     }
+
+     try {
+       // 调用移动任务的API
+       await moveTask(moveTaskId, targetYear, targetMonth, targetPhase);
+       
+       // 显示成功消息
+       alert(`任务已成功移动到 ${targetYear}年${targetMonth}月第${targetPhase}阶段`);
+       
+       // 关闭对话框并重置状态
+       setShowMoveDialog(false);
+       setMoveTaskId(null);
+       setTargetYear('');
+       setTargetMonth('');
+       setTargetPhase('');
+       setAvailableYears([]);
+       setAvailableMonths([]);
+       setAvailablePhases([]);
+       
+       // 刷新表格数据
+       fetchData();
+     } catch (error) {
+       console.error('移动任务失败:', error);
+       alert('移动任务失败，请稍后再试');
+     }
+   };
+
+  // 取消移动任务
+    const cancelMoveTask = () => {
+      setShowMoveDialog(false);
+      setMoveTaskId(null);
+      setTargetYear('');
+      setTargetMonth('');
+      setTargetPhase('');
+      setAvailableYears([]);
+      setAvailableMonths([]);
+      setAvailablePhases([]);
+    };
+
+    // 处理暂存任务
+     const handleStageTask = async (taskId) => {
+       if (window.confirm('确定要将此任务及其所有步骤移动到暂存区吗？')) {
+         try {
+           // 调用暂存任务的API
+           await stageTask(taskId);
+           
+           // 显示成功消息
+           alert('任务已成功移动到暂存区');
+           
+           // 刷新表格数据
+           fetchData();
+         } catch (error) {
+           console.error('暂存任务失败:', error);
+           alert('暂存任务失败，请稍后再试');
+         }
+       }
+     };
+
   return (
+    <>
     <div className="table-container">
       {loading && <div className="loading-overlay">加载中...</div>}
       <table ref={tableRef} className="resizable-table">
@@ -417,9 +546,9 @@ const TableComponent = ({ taskCircleId, loading }) => {
               <tr className="task-row">
                 <td
                   onDoubleClick={() => handleCellDoubleClick(task.id, null, 'task_name', task.task_name)}
-                  style={{ position: 'relative', paddingLeft: '30px' }} // 增加左侧内边距容纳按钮
+                  style={{ position: 'relative', paddingLeft: '80px' }} // 增加左侧内边距容纳三个按钮
                 >
-                  {/* 新增：任务删除按钮 - 放在任务名称单元格的左侧，靠近左边框 */}
+                  {/* 任务删除按钮 */}
                   <button 
                     className="delete-task-btn"
                     style={{
@@ -447,6 +576,60 @@ const TableComponent = ({ taskCircleId, loading }) => {
                     }}
                   >
                     ×
+                  </button>
+                  {/* 任务移动按钮 */}
+                  <button 
+                    className="move-task-btn"
+                    style={{
+                      position: 'absolute',
+                      left: '30px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: '20px',
+                      height: '20px',
+                      backgroundColor: '#52c41a',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12px'
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation(); // 防止触发双击编辑
+                      handleMoveTask(task.id);
+                    }}
+                  >
+                    ↗
+                  </button>
+                  {/* 任务暂存按钮 */}
+                  <button 
+                    className="stage-task-btn"
+                    style={{
+                      position: 'absolute',
+                      left: '55px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: '20px',
+                      height: '20px',
+                      backgroundColor: '#fa8c16',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12px'
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation(); // 防止触发双击编辑
+                      handleStageTask(task.id);
+                    }}
+                  >
+                    📦
                   </button>
                   {editingCell && editingCell.taskId === task.id && editingCell.field === 'task_name' && !editingCell.stepId ? (
                     <div className="edit-cell-container">
@@ -837,12 +1020,76 @@ const TableComponent = ({ taskCircleId, loading }) => {
         </tbody>
       </table>
     </div>
+    
+    {/* 移动任务对话框 */}
+    {showMoveDialog && (
+      <div className="move-dialog-overlay">
+        <div className="move-dialog">
+          <h3>移动任务到其他阶段</h3>
+          
+          <div className="move-form">
+            <div className="form-group">
+              <label>目标年份：</label>
+              <select 
+                value={targetYear} 
+                onChange={(e) => handleTargetYearChange(e.target.value)}
+              >
+                <option value="">请选择年份</option>
+                {availableYears.map(year => (
+                  <option key={year} value={year}>{year}年</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="form-group">
+              <label>目标月份：</label>
+              <select 
+                value={targetMonth} 
+                onChange={(e) => handleTargetMonthChange(e.target.value)}
+                disabled={!targetYear}
+              >
+                <option value="">请选择月份</option>
+                {availableMonths.map(month => (
+                  <option key={month} value={month}>{month}月</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="form-group">
+              <label>目标阶段：</label>
+              <select 
+                value={targetPhase} 
+                onChange={(e) => setTargetPhase(e.target.value)}
+                disabled={!targetMonth}
+              >
+                <option value="">请选择阶段</option>
+                {availablePhases.map(phase => (
+                  <option key={phase} value={phase}>第{phase}阶段</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          <div className="dialog-buttons">
+            <button 
+              className="confirm-move-btn" 
+              onClick={confirmMoveTask}
+              disabled={!targetYear || !targetMonth || !targetPhase}
+            >
+              确认移动
+            </button>
+            <button 
+              className="cancel-move-btn" 
+              onClick={cancelMoveTask}
+            >
+              取消
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 
 export default TableComponent;
-const handleAddStep = async (newStep) => {
-  // 从状态/上下文/Props中获取当前阶段ID
-  const { currentPhaseId } = this.state; // 或其他获取方式
-  await createStep(newStep, currentPhaseId);
-};

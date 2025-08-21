@@ -12,6 +12,7 @@ import {
 import { BASE_URL, getTaskCircleStats } from '../services/taskService.js';
 import * as XLSX from 'xlsx';
 import { getTasks } from '../services/taskService.js';
+import StagingArea from './StagingArea.js';
 
 export default function Header({ onTaskCircleChange }) {
   // 状态管理
@@ -37,6 +38,17 @@ export default function Header({ onTaskCircleChange }) {
   const yearRef = useRef(null);
   const monthRef = useRef(null);
   const phaseRef = useRef(null);
+
+  // 处理打开暂存区
+  const [showStagingArea, setShowStagingArea] = useState(false);
+  
+  const handleOpenStaging = () => {
+    setShowStagingArea(true);
+  };
+  
+  const handleCloseStagingArea = () => {
+    setShowStagingArea(false);
+  };
 
   // 组件加载时获取年份
   useEffect(() => {
@@ -388,6 +400,7 @@ export default function Header({ onTaskCircleChange }) {
     };
 
     return (
+      <>
       <div className="header-container">
         {loading && <div className="loading-overlay">加载中...</div>}
         <div className="title-wrapper">
@@ -502,7 +515,21 @@ export default function Header({ onTaskCircleChange }) {
         >
           导出表格
         </button>
+        {/* 添加暂存区按钮 */}
+        <button
+          className="add-plan"
+          onClick={handleOpenStaging}
+          style={{ marginLeft: '10px', backgroundColor: '#fa8c16' }}
+        >
+          暂存区
+        </button>
       </div>
-    );
+      
+      {/* 暂存区界面 */}
+      {showStagingArea && (
+        <StagingArea onClose={handleCloseStagingArea} />
+      )}
+    </>
+  );
 }
 

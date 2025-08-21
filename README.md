@@ -49,6 +49,7 @@
 ## Deployment
 
 1、把源码clone或下载到本地;  
+2、安装node，请移步官网下载：“https://nodejs.org/zh-cn/download”；
 2、安装mysql数据库，数据库安装包请自行下载：“https://dev.mysql.com/downloads/mysql/”；  
 3、安装好数据库后，推荐安装navicat数据库管理工具，安装包请自行下载：“https://www.navicat.com/en/download/navicat-premium”；  
 4、在navicat中，首先新建连接，然后新建数据库，数据库名称为“developmentdashboard”（也可以起个别的名字，但是要改配置文件），字符集为“utf8mb4”；  

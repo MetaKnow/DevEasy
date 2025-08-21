@@ -183,10 +183,151 @@ export const deleteTask = async (taskId) => {
 export const getTaskCircleStats = async (taskCircleId) => {
   try {
     const response = await fetch(`${BASE_URL}/task_circle/stats?id=${taskCircleId}`);
-    if (!response.ok) throw new Error('获取统计数据失败');
-    return await response.json();
+    const data = await response.json();
+    return data;
   } catch (error) {
     console.error('获取统计数据失败:', error);
     return null;
+  }
+};
+
+// 移动任务到其他年月阶段
+export const moveTask = async (taskId, targetYear, targetMonth, targetPhase) => {
+  try {
+    const response = await fetch(`${BASE_URL}/tasks/move`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        task_id: taskId,
+        target_year: targetYear,
+        target_month: targetMonth,
+        target_phase: targetPhase
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`服务器响应错误: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('移动任务失败:', error);
+    throw error;
+  }
+};
+
+// 获取目标阶段的task_circle_id
+export const getTaskCircleId = async (year, month, phase) => {
+  try {
+    const response = await fetch(`${BASE_URL}/task_circle/id?year=${year}&month=${month}&phase=${phase}`);
+    const data = await response.json();
+    return data.id;
+  } catch (error) {
+    console.error('获取task_circle_id失败:', error);
+    throw error;
+  }
+};
+
+// 暂存任务到暂存区
+export const stageTask = async (taskId) => {
+  try {
+    const response = await fetch(`${BASE_URL}/tasks/stage`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        task_id: taskId
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`服务器响应错误: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('暂存任务失败:', error);
+    throw error;
+  }
+};
+
+// 获取暂存区数据
+export const getStagedTasks = async () => {
+  try {
+    const response = await fetch(`${BASE_URL}/tasks/staged`);
+    
+    if (!response.ok) {
+      throw new Error(`服务器响应错误: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('获取暂存数据失败:', error);
+    throw error;
+  }
+};
+
+// 删除暂存任务
+export const deleteStagedTask = async (taskId) => {
+  try {
+    const response = await fetch(`${BASE_URL}/tasks/staged/${taskId}`, {
+      method: 'DELETE'
+    });
+    
+    if (!response.ok) {
+      throw new Error(`服务器响应错误: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('删除暂存任务失败:', error);
+    throw error;
+  }
+};
+
+// 从暂存区恢复任务
+export const restoreStagedTask = async (taskId, targetYear, targetMonth, targetPhase) => {
+  try {
+    const response = await fetch(`${BASE_URL}/tasks/staged/${taskId}/restore`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        target_year: targetYear,
+        target_month: targetMonth,
+        target_phase: targetPhase
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`服务器响应错误: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('恢复暂存任务失败:', error);
+    throw error;
+  }
+};
+
+// 删除暂存步骤
+export const deleteStagedStep = async (stepId) => {
+  try {
+    const response = await fetch(`${BASE_URL}/tasks/staged/step/${stepId}`, {
+      method: 'DELETE'
+    });
+    
+    if (!response.ok) {
+      throw new Error(`服务器响应错误: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('删除暂存步骤失败:', error);
+    throw error;
   }
 };
