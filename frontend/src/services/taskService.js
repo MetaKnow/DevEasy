@@ -47,7 +47,7 @@ export const createStep = async (stepData, taskId, task_circle_id) => {
       enddate: stepData.enddate || null
     };
 
-    const response = await fetch('http://localhost:5000/dashboard/create', {
+    const response = await fetch(`${BASE_URL}/dashboard/create`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
