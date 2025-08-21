@@ -39,9 +39,28 @@ const StagingArea = ({ onClose }) => {
   const [availableMonths, setAvailableMonths] = useState([]);
   const [availablePhases, setAvailablePhases] = useState([]);
 
+  // 简化的气泡提示状态
+  const [tooltipState, setTooltipState] = useState({ show: false, content: '', x: 0, y: 0 });
+
   // 辅助函数：判断文本是否需要显示气泡提示
   const shouldShowTooltip = (text, maxLength = 5) => {
     return text && text.toString().length > maxLength;
+  };
+
+  // 显示气泡提示
+  const showTooltip = (e, content) => {
+    const rect = e.target.getBoundingClientRect();
+    setTooltipState({
+      show: true,
+      content: content,
+      x: rect.left + rect.width / 2,
+      y: rect.top - 10
+    });
+  };
+
+  // 隐藏气泡提示
+  const hideTooltip = () => {
+    setTooltipState({ show: false, content: '', x: 0, y: 0 });
   };
 
   // 辅助函数：创建带气泡提示的单元格内容
@@ -51,11 +70,22 @@ const StagingArea = ({ onClose }) => {
     
     if (needsTooltip) {
       return (
-        <Tooltip content={content}>
-          <div className="cell-with-tooltip">
-            {display}
-          </div>
-        </Tooltip>
+        <span 
+          style={{
+            cursor: 'help',
+            display: 'inline-block',
+            maxWidth: '100%',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            backgroundColor: 'transparent'
+          }}
+          onMouseEnter={(e) => showTooltip(e, content)}
+          onMouseLeave={hideTooltip}
+          title={content}
+        >
+          {display}
+        </span>
       );
     }
     
@@ -395,8 +425,8 @@ const StagingArea = ({ onClose }) => {
                                 {createCellWithTooltip(step.task_step)}
                               </div>
                             </td>
-                            <td>{step.startdate ? new Date(step.startdate).toLocaleDateString('zh-CN') : ''}</td>
-                            <td>{step.enddate ? new Date(step.enddate).toLocaleDateString('zh-CN') : ''}</td>
+                            <td>{createCellWithTooltip(step.startdate ? new Date(step.startdate).toLocaleDateString('zh-CN') : '')}</td>
+                            <td>{createCellWithTooltip(step.enddate ? new Date(step.enddate).toLocaleDateString('zh-CN') : '')}</td>
                             <td>{createCellWithTooltip(step.responsibility)}</td>
                             <td>{createCellWithTooltip(step.taskstate)}</td>
                             <td>{createCellWithTooltip(step.iscomplete)}</td>
@@ -414,6 +444,44 @@ const StagingArea = ({ onClose }) => {
           </div>
         </div>
       </div>
+      
+      {/* 自定义气泡提示 */}
+      {tooltipState.show && (
+        <div
+          style={{
+            position: 'fixed',
+            left: tooltipState.x,
+            top: tooltipState.y,
+            transform: 'translateX(-50%) translateY(-100%)',
+            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+            color: 'white',
+            padding: '8px 12px',
+            borderRadius: '6px',
+            fontSize: '14px',
+            maxWidth: '300px',
+            wordWrap: 'break-word',
+            whiteSpace: 'pre-wrap',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            zIndex: 10002,
+            pointerEvents: 'none'
+          }}
+        >
+          {tooltipState.content}
+          <div
+            style={{
+              position: 'absolute',
+              top: '100%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: 0,
+              height: 0,
+              borderLeft: '5px solid transparent',
+              borderRight: '5px solid transparent',
+              borderTop: '5px solid rgba(0, 0, 0, 0.9)'
+            }}
+          />
+        </div>
+      )}
       
       {/* 移动任务对话框 */}
       {showMoveDialog && (

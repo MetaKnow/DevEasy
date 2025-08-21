@@ -11,7 +11,7 @@
  Target Server Version : 80021
  File Encoding         : 65001
 
- Date: 03/08/2025 13:12:42
+ Date: 21/08/2025 21:47:04
 */
 
 SET NAMES utf8mb4;
@@ -41,7 +41,7 @@ CREATE TABLE `dashboard`  (
   INDEX `dashboard_task_id_foreign_idx`(`task_id`) USING BTREE,
   CONSTRAINT `dashboard_ibfk_1` FOREIGN KEY (`task_circle_id`) REFERENCES `task_circle` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `dashboard_task_id_foreign_idx` FOREIGN KEY (`task_id`) REFERENCES `task` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 100 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 106 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for sequelizemeta
@@ -52,6 +52,52 @@ CREATE TABLE `sequelizemeta`  (
   PRIMARY KEY (`name`) USING BTREE,
   UNIQUE INDEX `name`(`name`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8 COLLATE = utf8_unicode_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for staged_dashboard
+-- ----------------------------
+DROP TABLE IF EXISTS `staged_dashboard`;
+CREATE TABLE `staged_dashboard`  (
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `original_step_id` int(0) NOT NULL COMMENT '原始步骤ID',
+  `staged_task_id` int(0) NOT NULL,
+  `task_circle_id` int(0) NULL DEFAULT NULL COMMENT '原始所属阶段ID',
+  `task_step` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `startdate` date NULL DEFAULT NULL,
+  `enddate` date NULL DEFAULT NULL,
+  `responsibility` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL,
+  `taskstate` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL,
+  `iscomplete` enum('是','否') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL,
+  `islate` enum('是','否') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL,
+  `priority` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL,
+  `remark` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL,
+  `staged_at` datetime(0) NOT NULL COMMENT '暂存时间',
+  `createdAt` datetime(0) NOT NULL,
+  `updatedAt` datetime(0) NOT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `staged_task_id`(`staged_task_id`) USING BTREE,
+  CONSTRAINT `staged_dashboard_ibfk_1` FOREIGN KEY (`staged_task_id`) REFERENCES `staged_task` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for staged_task
+-- ----------------------------
+DROP TABLE IF EXISTS `staged_task`;
+CREATE TABLE `staged_task`  (
+  `id` int(0) NOT NULL AUTO_INCREMENT,
+  `original_task_id` int(0) NOT NULL COMMENT '原始任务ID',
+  `task_circle_id` int(0) NULL DEFAULT NULL COMMENT '原始所属阶段ID',
+  `task_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `startdate` date NULL DEFAULT NULL,
+  `enddate` date NULL DEFAULT NULL,
+  `remark` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL,
+  `iscomplete` enum('是','否') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL,
+  `islate` enum('是','否') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL,
+  `staged_at` datetime(0) NOT NULL COMMENT '暂存时间',
+  `createdAt` datetime(0) NOT NULL,
+  `updatedAt` datetime(0) NOT NULL,
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for task
@@ -71,7 +117,7 @@ CREATE TABLE `task`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `task_circle_id`(`task_circle_id`) USING BTREE,
   CONSTRAINT `task_ibfk_1` FOREIGN KEY (`task_circle_id`) REFERENCES `task_circle` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 51 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 55 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for task_circle
@@ -98,6 +144,6 @@ CREATE TABLE `task_circle`  (
   `complete_task` int(0) NULL DEFAULT 0,
   `complete_step` int(0) NULL DEFAULT 0,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 42 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 45 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 SET FOREIGN_KEY_CHECKS = 1;
