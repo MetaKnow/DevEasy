@@ -1,6 +1,9 @@
 // 1. 导入必要的模块
 const express = require('express');
 const cors = require('cors');
+const { exec } = require('child_process');
+const path = require('path');
+const db = require('./models');
 
 // 2. 创建Express应用实例
 const app = express();
@@ -48,8 +51,64 @@ app.use((err, req, res, next) => {
   res.status(500).send('Something broke!');
 });
 
+// 自动数据库迁移函数
+async function runMigrations() {
+  return new Promise((resolve, reject) => {
+    console.log('检查数据库迁移...');
+    
+    const migrationCommand = 'npx sequelize-cli db:migrate';
+    
+    exec(migrationCommand, { cwd: __dirname }, (error, stdout, stderr) => {
+      if (error) {
+        // 检查是否是重复字段错误，如果是则继续启动
+        const errorMessage = error.message || '';
+        if (errorMessage.includes('Duplicate column name') || 
+            errorMessage.includes('duplicate key') ||
+            errorMessage.includes('already exists')) {
+          console.warn('检测到重复字段错误，可能是数据库已经是最新状态:', errorMessage);
+          console.log('跳过迁移错误，继续启动服务器...');
+          resolve('迁移跳过 - 数据库可能已是最新状态');
+          return;
+        }
+        
+        console.error('数据库迁移失败:', error);
+        reject(error);
+        return;
+      }
+      
+      if (stderr) {
+        console.warn('迁移警告:', stderr);
+      }
+      
+      console.log('数据库迁移完成:', stdout);
+      resolve(stdout);
+    });
+  });
+}
+
+// 启动服务器前的初始化函数
+async function initializeServer() {
+  try {
+    // 1. 测试数据库连接
+    console.log('测试数据库连接...');
+    await db.sequelize.authenticate();
+    console.log('数据库连接成功');
+    
+    // 2. 执行数据库迁移
+    await runMigrations();
+    
+    // 3. 启动服务器
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+      console.log(`服务器已启动，端口: ${PORT}`);
+      console.log('数据库已同步，服务器准备就绪');
+    });
+    
+  } catch (error) {
+    console.error('服务器初始化失败:', error);
+    process.exit(1);
+  }
+}
+
 // 7. 启动服务器
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+initializeServer();
