@@ -70,6 +70,20 @@ module.exports = (sequelize) => {
         modelName: 'dashboard'
       });
     }
+    
+    static associate(models) {
+      // 定义与Task模型的关联
+      Dashboard.belongsTo(models.Task, {
+        foreignKey: 'task_id',
+        as: 'task'
+      });
+      
+      // 定义与TaskCircle模型的关联
+      Dashboard.belongsTo(models.TaskCircle, {
+        foreignKey: 'task_circle_id',
+        as: 'taskCircle'
+      });
+    }
   }
 
   Dashboard.init(sequelize);

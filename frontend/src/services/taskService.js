@@ -331,3 +331,34 @@ export const deleteStagedStep = async (stepId) => {
     throw error;
   }
 };
+
+// 搜索任务
+export const searchTasks = async (criteria) => {
+  try {
+    const queryParams = new URLSearchParams();
+    
+    if (criteria.taskOrStep) {
+      queryParams.append('taskOrStep', criteria.taskOrStep);
+    }
+    if (criteria.isComplete) {
+      queryParams.append('isComplete', criteria.isComplete);
+    }
+    if (criteria.isLate) {
+      queryParams.append('isLate', criteria.isLate);
+    }
+    if (criteria.responsibility) {
+      queryParams.append('responsibility', criteria.responsibility);
+    }
+    
+    const response = await fetch(`${BASE_URL}/tasks/search?${queryParams.toString()}`);
+    
+    if (!response.ok) {
+      throw new Error(`服务器响应错误: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('搜索任务失败:', error);
+    throw error;
+  }
+};

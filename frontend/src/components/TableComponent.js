@@ -214,10 +214,16 @@ const TableComponent = ({ taskCircleId, loading }) => {
             steps: task.steps.map(step => {
               if (step.id === stepId) {
                 // 准备更新数据
-                const updatedStep = {
+                let updatedStep = {
                   ...step,
                   [field]: editValue
                 };
+                
+                // 如果编辑的是当前状态，自动更新是否完成字段
+                if (field === 'taskstate') {
+                  updatedStep.iscomplete = editValue === '已完成' ? '是' : '否';
+                }
+                
                 // 调用更新函数
                 updateStep(stepId, updatedStep)
                   .then(response => {
@@ -295,8 +301,14 @@ const TableComponent = ({ taskCircleId, loading }) => {
       }
 
       try {
+        // 根据当前状态自动设置是否完成
+        const stepDataWithAutoComplete = {
+          ...newStepData,
+          iscomplete: newStepData.taskstate === '已完成' ? '是' : '否'
+        };
+        
         // 创建新步骤
-        const newStep = await createStep(newStepData, taskId, taskCircleId);
+        const newStep = await createStep(stepDataWithAutoComplete, taskId, taskCircleId);
         // 更新表格数据
         const updatedData = tableData.map(task => {
           if (task.id === taskId) {
@@ -514,31 +526,6 @@ const TableComponent = ({ taskCircleId, loading }) => {
           </tr>
         </thead>
         <tbody>
-          {/* 新任务的可编辑行 */}
-          {showAddTaskRow && (
-            <tr className="new-task-row">
-              <td>
-                <div className="new-task-input-container">
-                  <input
-                    type="text"
-                    value={newTaskName}
-                    onChange={(e) => setNewTaskName(e.target.value)}
-                    placeholder="输入任务名称"
-                    autoFocus
-                  />
-                  <div className="new-task-buttons">
-                    <button className="save-task-btn" onClick={handleAddTask}>保存</button>
-                    <button className="cancel-task-btn" onClick={() => setShowAddTaskRow(false)}>取消</button>
-                  </div>
-                </div>
-              </td>
-              {/* 其他列的空单元格 */}
-              {[...Array(9)].map((_, i) => (
-                <td key={`empty-${i}`}></td>
-              ))}
-            </tr>
-          )}
-
           {/* 现有任务和步骤 */}
           {tableData.map(task => (
             <React.Fragment key={task.id}>
@@ -792,27 +779,9 @@ const TableComponent = ({ taskCircleId, loading }) => {
                     )}
                   </td>
                   <td
-                    // 修改双击事件处理函数的参数
-                      onDoubleClick={() => handleCellDoubleClick(task.id, step.id, 'iscomplete', step.iscomplete)}
+                      style={{ backgroundColor: '#f5f5f5', cursor: 'default' }}
                     >
-                      {editingCell && editingCell.taskId === task.id && editingCell.stepId === step.id && editingCell.field === 'iscomplete' ? (
-                        <div className="edit-cell-container">
-                          <select
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            autoFocus
-                          >
-                            <option value="是">是</option>
-                            <option value="否">否</option>
-                          </select>
-                          <div className="edit-buttons">
-                            <button className="save-edit-btn" onClick={handleSaveEdit}>保存</button>
-                            <button className="cancel-edit-btn" onClick={handleCancelEdit}>取消</button>
-                          </div>
-                        </div>
-                      ) : (
-                        createCellWithTooltip(step.iscomplete)  // 直接显示枚举值，不再使用三元表达式
-                      )}
+                      {createCellWithTooltip(step.taskstate === '已完成' ? '是' : '否')}
                     </td>
                     
                     
@@ -885,27 +854,7 @@ const TableComponent = ({ taskCircleId, loading }) => {
                 </tr>
               ))}
 
-              {/* 步骤添加行 */}
-              <tr className="add-step-row">
-                <td></td> {/* 任务名称列为空 */}
-                <td>
-                  <button 
-                    className="add-step-btn"
-                    onClick={() => handleAddStep(task.id)}
-                  >
-                    +
-                  </button>
-                </td>
-                {/* 其他列的空单元格 */}
-                {[...Array(8)].map((_, i) => (
-                  <td key={`step-empty-${i}`}></td>
-                ))}
-              </tr>
-
-              {/* 步骤编辑行
-              修改渲染部分，将输入框改为下拉菜单
-              找到新步骤行的渲染部分 */}
-
+              {/* 步骤编辑行 */}
               {showAddStepRow === task.id && (
                 <tr className="new-step-row">
                   <td rowSpan="1"></td>
@@ -958,15 +907,8 @@ const TableComponent = ({ taskCircleId, loading }) => {
                       ))}
                     </select>
                   </td>
-                  <td>
-                    <select
-                      value={newStepData.iscomplete}
-                      onChange={(e) => setNewStepData({...newStepData, iscomplete: e.target.value})}
-                    >
-                      <option value="">选择</option>
-                      <option value="是">是</option>
-                      <option value="否">否</option>
-                    </select>
+                  <td style={{ backgroundColor: '#f5f5f5' }}>
+                    <span>{newStepData.taskstate === '已完成' ? '是' : '否'}</span>
                   </td>
                   <td>
                     <select
@@ -999,8 +941,50 @@ const TableComponent = ({ taskCircleId, loading }) => {
                   </td>
                 </tr>
               )}
+
+              {/* 步骤添加行 */}
+              <tr className="add-step-row">
+                <td></td> {/* 任务名称列为空 */}
+                <td>
+                  <button 
+                    className="add-step-btn"
+                    onClick={() => handleAddStep(task.id)}
+                  >
+                    +
+                  </button>
+                </td>
+                {/* 其他列的空单元格 */}
+                {[...Array(8)].map((_, i) => (
+                  <td key={`step-empty-${i}`}></td>
+                ))}
+              </tr>
             </React.Fragment>
           ))}
+
+          {/* 新任务的可编辑行 */}
+          {showAddTaskRow && (
+            <tr className="new-task-row">
+              <td>
+                <div className="new-task-input-container">
+                  <input
+                    type="text"
+                    value={newTaskName}
+                    onChange={(e) => setNewTaskName(e.target.value)}
+                    placeholder="输入任务名称"
+                    autoFocus
+                  />
+                  <div className="new-task-buttons">
+                    <button className="save-task-btn" onClick={handleAddTask}>保存</button>
+                    <button className="cancel-task-btn" onClick={() => setShowAddTaskRow(false)}>取消</button>
+                  </div>
+                </div>
+              </td>
+              {/* 其他列的空单元格 */}
+              {[...Array(9)].map((_, i) => (
+                <td key={`empty-${i}`}></td>
+              ))}
+            </tr>
+          )}
 
           {/* 带添加按钮的持久行 */}
           <tr className="add-task-row">

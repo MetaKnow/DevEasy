@@ -420,4 +420,119 @@ router.delete('/staged/step/:id', async (req, res) => {
   }
 });
 
+// 搜索任务
+router.get('/search', async (req, res) => {
+  try {
+    const { taskOrStep, isComplete, isLate, responsibility } = req.query;
+    console.log('接收到搜索请求:', req.query);
+
+    // 构建搜索条件
+    const whereConditions = {};
+    const stepWhereConditions = {};
+    
+    if (isComplete) {
+      whereConditions.iscomplete = isComplete;
+      stepWhereConditions.iscomplete = isComplete;
+    }
+    
+    if (isLate) {
+      whereConditions.islate = isLate;
+      stepWhereConditions.islate = isLate;
+    }
+    
+    if (responsibility) {
+      stepWhereConditions.responsibility = responsibility;
+    }
+
+    // 搜索任务
+    let taskResults = [];
+    if (taskOrStep || isComplete || isLate) {
+      const taskWhere = { ...whereConditions };
+      if (taskOrStep) {
+        taskWhere.task_name = {
+          [db.Sequelize.Op.like]: `%${taskOrStep}%`
+        };
+      }
+      
+      const tasks = await db.Task.findAll({
+        where: taskWhere,
+        include: [{
+          model: db.TaskCircle,
+          as: 'taskCircle',
+          attributes: ['year', 'month', 'phase']
+        }]
+      });
+      
+      taskResults = tasks.map(task => ({
+        task_id: task.id,
+        task_name: task.task_name,
+        year: task.taskCircle.year,
+        month: task.taskCircle.month,
+        phase: task.taskCircle.phase,
+        task_circle_id: task.task_circle_id,
+        type: 'task'
+      }));
+    }
+
+    // 搜索步骤
+    let stepResults = [];
+    if (taskOrStep || responsibility || isComplete || isLate) {
+      const stepWhere = { ...stepWhereConditions };
+      if (taskOrStep) {
+        stepWhere.task_step = {
+          [db.Sequelize.Op.like]: `%${taskOrStep}%`
+        };
+      }
+      
+      const steps = await db.dashboard.findAll({
+         where: stepWhere,
+         include: [{
+           model: db.Task,
+           as: 'task',
+           attributes: ['task_name'],
+           include: [{
+             model: db.TaskCircle,
+             as: 'taskCircle',
+             attributes: ['year', 'month', 'phase']
+           }]
+         }]
+       });
+      
+      stepResults = steps.map(step => ({
+         task_id: step.task_id,
+         task_name: step.task.task_name,
+         year: step.task.taskCircle.year,
+         month: step.task.taskCircle.month,
+         phase: step.task.taskCircle.phase,
+         task_circle_id: step.task_circle_id,
+         type: 'step',
+         step_content: step.task_step
+       }));
+    }
+
+    // 合并结果并去重（按task_id）
+    const allResults = [...taskResults, ...stepResults];
+    const uniqueResults = allResults.reduce((acc, current) => {
+      const existing = acc.find(item => item.task_id === current.task_id);
+      if (!existing) {
+        acc.push(current);
+      }
+      return acc;
+    }, []);
+
+    // 按年月阶段排序
+    uniqueResults.sort((a, b) => {
+      if (a.year !== b.year) return b.year - a.year;
+      if (a.month !== b.month) return b.month - a.month;
+      return b.phase - a.phase;
+    });
+
+    console.log('搜索结果:', uniqueResults.length, '个任务');
+    res.json(uniqueResults);
+  } catch (err) {
+    console.error('搜索任务出错:', err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
 module.exports = router;

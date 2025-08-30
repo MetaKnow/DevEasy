@@ -13,8 +13,9 @@ import { BASE_URL, getTaskCircleStats } from '../services/taskService.js';
 import * as XLSX from 'xlsx';
 import { getTasks } from '../services/taskService.js';
 import StagingArea from './StagingArea.js';
+import SearchPanel from './SearchPanel.js';
 
-export default function Header({ onTaskCircleChange }) {
+export default function Header({ onTaskCircleChange, onSearchPanelToggle }) {
   // 状态管理
   const [years, setYears] = useState([]);
   const [months, setMonths] = useState([]);
@@ -48,6 +49,56 @@ export default function Header({ onTaskCircleChange }) {
   
   const handleCloseStagingArea = () => {
     setShowStagingArea(false);
+  };
+  
+  // 处理搜索面板
+  const [showSearchPanel, setShowSearchPanel] = useState(false);
+  
+  const handleOpenSearch = () => {
+    setShowSearchPanel(true);
+    if (onSearchPanelToggle) {
+      onSearchPanelToggle(true);
+    }
+  };
+  
+  const handleCloseSearch = () => {
+    setShowSearchPanel(false);
+    if (onSearchPanelToggle) {
+      onSearchPanelToggle(false);
+    }
+  };
+  
+  // 处理任务选择（从搜索结果跳转）
+  const handleTaskSelect = async (task) => {
+    try {
+      // 设置年份并加载对应的月份
+      setSelectedYear(task.year.toString());
+      setYearInput(task.year.toString());
+      const monthsData = await getMonthsByYear(task.year);
+      setMonths(monthsData);
+      
+      // 设置月份并加载对应的阶段
+      setSelectedMonth(task.month.toString());
+      setMonthInput(task.month.toString());
+      const phasesData = await getPhasesByYearAndMonth(task.year, task.month);
+      setPhases(phasesData);
+      
+      // 设置阶段
+      setSelectedPhase(task.phase.toString());
+      setPhaseInput(task.phase.toString());
+      
+      // 触发任务圈变化，加载对应的任务数据
+      if (onTaskCircleChange) {
+        onTaskCircleChange(task.task_circle_id, true);
+        // 延迟一下再设置为false，确保数据加载完成
+        setTimeout(() => {
+          onTaskCircleChange(task.task_circle_id, false);
+        }, 500);
+      }
+    } catch (error) {
+      console.error('跳转到任务失败:', error);
+      alert('跳转到任务失败，请稍后再试');
+    }
   };
 
   // 组件加载时获取年份
@@ -523,11 +574,27 @@ export default function Header({ onTaskCircleChange }) {
         >
           暂存区
         </button>
+        {/* 添加搜索按钮 */}
+        <button
+          className="add-plan"
+          onClick={handleOpenSearch}
+          style={{ marginLeft: '10px', backgroundColor: '#52c41a' }}
+        >
+          检索
+        </button>
       </div>
       
       {/* 暂存区界面 */}
       {showStagingArea && (
         <StagingArea onClose={handleCloseStagingArea} />
+      )}
+      
+      {/* 搜索面板 */}
+      {showSearchPanel && (
+        <SearchPanel 
+          onClose={handleCloseSearch} 
+          onTaskSelect={handleTaskSelect}
+        />
       )}
     </>
   );

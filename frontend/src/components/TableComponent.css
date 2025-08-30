@@ -1,13 +1,15 @@
 .table-container {
-  width: 98%; /* 调整宽度为95%，留出5%的空间作为外边距 */
+  width: 100%; /* 改为100%宽度 */
   margin: 0 auto; /* 水平居中表格 */
   overflow-x: auto;
   margin-top: 20px;
+  position: relative; /* 添加相对定位 */
 }
 
 /* 移除固定宽度设置，改为自适应 */
 .resizable-table {
   width: 100%;
+  min-width: 1400px; /* 设置最小宽度确保横向滚动 */
   border-collapse: collapse;
   table-layout: fixed; /* 改回fixed，固定列宽 */
 }
