@@ -426,92 +426,244 @@ router.get('/search', async (req, res) => {
     const { taskOrStep, isComplete, isLate, responsibility } = req.query;
     console.log('接收到搜索请求:', req.query);
 
-    // 构建搜索条件
-    const whereConditions = {};
-    const stepWhereConditions = {};
-    
-    if (isComplete) {
-      whereConditions.iscomplete = isComplete;
-      stepWhereConditions.iscomplete = isComplete;
-    }
-    
-    if (isLate) {
-      whereConditions.islate = isLate;
-      stepWhereConditions.islate = isLate;
-    }
-    
+    let allResults = [];
+
+    // 如果有责任人条件，必须通过步骤搜索
     if (responsibility) {
-      stepWhereConditions.responsibility = responsibility;
-    }
-
-    // 搜索任务
-    let taskResults = [];
-    if (taskOrStep || isComplete || isLate) {
-      const taskWhere = { ...whereConditions };
+      // 构建步骤搜索条件
+      const stepWhereConditions = {
+        responsibility: responsibility // 责任人精确匹配
+      };
+      
+      // 如果有关键词，添加步骤内容搜索
       if (taskOrStep) {
-        taskWhere.task_name = {
+        stepWhereConditions.task_step = {
           [db.Sequelize.Op.like]: `%${taskOrStep}%`
         };
       }
       
-      const tasks = await db.Task.findAll({
-        where: taskWhere,
-        include: [{
-          model: db.TaskCircle,
-          as: 'taskCircle',
-          attributes: ['year', 'month', 'phase']
-        }]
-      });
+      // 构建任务级别的条件
+      const taskWhereConditions = {};
+      if (isComplete) {
+        taskWhereConditions.iscomplete = isComplete;
+      }
+      if (isLate) {
+        taskWhereConditions.islate = isLate;
+      }
       
-      taskResults = tasks.map(task => ({
-        task_id: task.id,
-        task_name: task.task_name,
-        year: task.taskCircle.year,
-        month: task.taskCircle.month,
-        phase: task.taskCircle.phase,
-        task_circle_id: task.task_circle_id,
-        type: 'task'
-      }));
-    }
-
-    // 搜索步骤
-    let stepResults = [];
-    if (taskOrStep || responsibility || isComplete || isLate) {
-      const stepWhere = { ...stepWhereConditions };
+      // 如果有关键词，也要在任务名称中搜索
       if (taskOrStep) {
-        stepWhere.task_step = {
+        taskWhereConditions.task_name = {
           [db.Sequelize.Op.like]: `%${taskOrStep}%`
         };
       }
       
-      const steps = await db.dashboard.findAll({
-         where: stepWhere,
-         include: [{
-           model: db.Task,
-           as: 'task',
-           attributes: ['task_name'],
-           include: [{
-             model: db.TaskCircle,
-             as: 'taskCircle',
-             attributes: ['year', 'month', 'phase']
-           }]
-         }]
-       });
+      // 执行两个查询：步骤内容匹配 和 任务名称匹配
+      let stepContentResults = [];
+      let taskNameResults = [];
       
-      stepResults = steps.map(step => ({
-         task_id: step.task_id,
-         task_name: step.task.task_name,
-         year: step.task.taskCircle.year,
-         month: step.task.taskCircle.month,
-         phase: step.task.taskCircle.phase,
-         task_circle_id: step.task_circle_id,
-         type: 'step',
-         step_content: step.task_step
-       }));
+      // 1. 先找到责任人负责的所有任务ID
+      if (taskOrStep) {
+        const responsibilitySteps = await db.dashboard.findAll({
+          where: {
+            responsibility: responsibility
+          },
+          attributes: ['task_id'],
+          group: ['task_id']
+        });
+        
+        const taskIds = responsibilitySteps.map(step => step.task_id);
+        
+        if (taskIds.length > 0) {
+          // 在这些任务中搜索包含关键词的步骤
+          stepContentResults = await db.dashboard.findAll({
+            where: {
+              task_id: {
+                [db.Sequelize.Op.in]: taskIds
+              },
+              task_step: {
+                [db.Sequelize.Op.like]: `%${taskOrStep}%`
+              }
+            },
+            include: [{
+              model: db.Task,
+              as: 'task',
+              where: Object.keys(taskWhereConditions).length > 0 ? {
+                ...(isComplete && { iscomplete: isComplete }),
+                ...(isLate && { islate: isLate })
+              } : undefined,
+              attributes: ['task_name', 'iscomplete', 'islate'],
+              include: [{
+                model: db.TaskCircle,
+                as: 'taskCircle',
+                attributes: ['year', 'month', 'phase']
+              }]
+            }]
+          });
+        }
+        
+        // 2. 在责任人负责的任务中搜索任务名称匹配的
+         if (taskIds.length > 0) {
+           taskNameResults = await db.dashboard.findAll({
+             where: {
+               task_id: {
+                 [db.Sequelize.Op.in]: taskIds
+               }
+             },
+             include: [{
+               model: db.Task,
+               as: 'task',
+               where: {
+                 task_name: {
+                   [db.Sequelize.Op.like]: `%${taskOrStep}%`
+                 },
+                 ...(isComplete && { iscomplete: isComplete }),
+                 ...(isLate && { islate: isLate })
+               },
+               attributes: ['task_name', 'iscomplete', 'islate'],
+               include: [{
+                 model: db.TaskCircle,
+                 as: 'taskCircle',
+                 attributes: ['year', 'month', 'phase']
+               }]
+             }]
+           });
+         }
+        
+        // 合并结果
+         const combinedResults = [...stepContentResults, ...taskNameResults];
+         console.log('步骤内容搜索结果数量:', stepContentResults.length);
+         console.log('任务名称搜索结果数量:', taskNameResults.length);
+         console.log('合并后结果数量:', combinedResults.length);
+         
+         allResults = combinedResults.map(step => ({
+           task_id: step.task_id,
+           task_name: step.task.task_name,
+           year: step.task.taskCircle.year,
+           month: step.task.taskCircle.month,
+           phase: step.task.taskCircle.phase,
+           task_circle_id: step.task_circle_id,
+           type: 'step',
+           step_content: step.task_step
+         }));
+         
+         console.log('映射后的allResults数量:', allResults.length);
+      } else {
+        // 没有关键词，只按责任人搜索
+        const steps = await db.dashboard.findAll({
+          where: stepWhereConditions,
+          include: [{
+            model: db.Task,
+            as: 'task',
+            where: Object.keys(taskWhereConditions).length > 0 ? taskWhereConditions : undefined,
+            attributes: ['task_name', 'iscomplete', 'islate'],
+            include: [{
+              model: db.TaskCircle,
+              as: 'taskCircle',
+              attributes: ['year', 'month', 'phase']
+            }]
+          }]
+        });
+        
+        allResults = steps.map(step => ({
+          task_id: step.task_id,
+          task_name: step.task.task_name,
+          year: step.task.taskCircle.year,
+          month: step.task.taskCircle.month,
+          phase: step.task.taskCircle.phase,
+          task_circle_id: step.task_circle_id,
+          type: 'step',
+          step_content: step.task_step
+        }));
+       }
+    } else {
+      // 没有责任人条件时，分别进行任务搜索和步骤搜索
+      
+      // 构建任务搜索条件
+      const taskWhereConditions = {};
+      if (isComplete) {
+        taskWhereConditions.iscomplete = isComplete;
+      }
+      if (isLate) {
+        taskWhereConditions.islate = isLate;
+      }
+      if (taskOrStep) {
+        taskWhereConditions.task_name = {
+          [db.Sequelize.Op.like]: `%${taskOrStep}%`
+        };
+      }
+
+      // 搜索任务（直接匹配任务名称）
+      let taskResults = [];
+      if (Object.keys(taskWhereConditions).length > 0) {
+        const tasks = await db.Task.findAll({
+          where: taskWhereConditions,
+          include: [{
+            model: db.TaskCircle,
+            as: 'taskCircle',
+            attributes: ['year', 'month', 'phase']
+          }]
+        });
+        
+        taskResults = tasks.map(task => ({
+          task_id: task.id,
+          task_name: task.task_name,
+          year: task.taskCircle.year,
+          month: task.taskCircle.month,
+          phase: task.taskCircle.phase,
+          task_circle_id: task.task_circle_id,
+          type: 'task'
+        }));
+      }
+
+      // 搜索步骤（通过步骤内容找到任务）
+      let stepResults = [];
+      if (taskOrStep) {
+        const stepWhereConditions = {
+          task_step: {
+            [db.Sequelize.Op.like]: `%${taskOrStep}%`
+          }
+        };
+        
+        const taskIncludeWhere = {};
+        if (isComplete) {
+          taskIncludeWhere.iscomplete = isComplete;
+        }
+        if (isLate) {
+          taskIncludeWhere.islate = isLate;
+        }
+        
+        const steps = await db.dashboard.findAll({
+          where: stepWhereConditions,
+          include: [{
+            model: db.Task,
+            as: 'task',
+            where: Object.keys(taskIncludeWhere).length > 0 ? taskIncludeWhere : undefined,
+            attributes: ['task_name', 'iscomplete', 'islate'],
+            include: [{
+              model: db.TaskCircle,
+              as: 'taskCircle',
+              attributes: ['year', 'month', 'phase']
+            }]
+          }]
+        });
+        
+        stepResults = steps.map(step => ({
+          task_id: step.task_id,
+          task_name: step.task.task_name,
+          year: step.task.taskCircle.year,
+          month: step.task.taskCircle.month,
+          phase: step.task.taskCircle.phase,
+          task_circle_id: step.task_circle_id,
+          type: 'step',
+          step_content: step.task_step
+        }));
+      }
+
+      allResults = [...taskResults, ...stepResults];
     }
 
-    // 合并结果并去重（按task_id）
-    const allResults = [...taskResults, ...stepResults];
+    // 去重（按task_id）
     const uniqueResults = allResults.reduce((acc, current) => {
       const existing = acc.find(item => item.task_id === current.task_id);
       if (!existing) {
@@ -527,7 +679,9 @@ router.get('/search', async (req, res) => {
       return b.phase - a.phase;
     });
 
-    console.log('搜索结果:', uniqueResults.length, '个任务');
+    console.log('去重前结果数量:', allResults.length);
+    console.log('去重后结果数量:', uniqueResults.length);
+    console.log('最终搜索结果:', uniqueResults);
     res.json(uniqueResults);
   } catch (err) {
     console.error('搜索任务出错:', err);

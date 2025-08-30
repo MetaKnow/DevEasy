@@ -132,7 +132,7 @@ const SearchPanel = ({ onClose, onTaskSelect }) => {
               fontSize: '14px'
             }}
           >
-            <option value="">全部</option>
+            <option value="">无</option>
             <option value="是">是</option>
             <option value="否">否</option>
           </select>
@@ -153,7 +153,7 @@ const SearchPanel = ({ onClose, onTaskSelect }) => {
               fontSize: '14px'
             }}
           >
-            <option value="">全部</option>
+            <option value="">无</option>
             <option value="是">是</option>
             <option value="否">否</option>
           </select>
@@ -174,7 +174,7 @@ const SearchPanel = ({ onClose, onTaskSelect }) => {
               fontSize: '14px'
             }}
           >
-            <option value="">全部</option>
+            <option value="">无</option>
             {dictConfig.responsiblePerson.map(person => (
               <option key={person} value={person}>{person}</option>
             ))}
